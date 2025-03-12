@@ -1,0 +1,34 @@
+from django.db import models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class MainModel(models.Model):
+    name = models.CharField(max_length=100)
+
+class SignalCreatedModel(models.Model):
+    related_to = models.ForeignKey(MainModel, on_delete=models.CASCADE)
+    note = models.CharField(max_length=100)
+
+@receiver(post_save, sender=MainModel)
+def my_signal_handler(sender, instance, **kwargs):
+    print("Signal handler executed. Creating SignalCreatedModel entry...")
+    SignalCreatedModel.objects.create(related_to=instance, note="Created by signal")
+
+# Test case
+if __name__ == "__main__":
+    try:
+        with transaction.atomic():  # Start transaction
+            print("Creating MainModel object inside transaction...")
+            main_obj = MainModel.objects.create(name="Main Object")
+
+            print("Intentionally raising an error...")
+            raise Exception("Simulated failure!")  # This should trigger a rollback
+
+    except Exception as e:
+        print(f"Transaction failed: {e}")
+
+    # Checking if SignalCreatedModel entry exists
+    if SignalCreatedModel.objects.exists():
+        print("SignalCreatedModel entry still exists! Signals run in a separate transaction.")
+    else:
+        print("SignalCreatedModel entry was rolled back! Signals run in the same transaction.")
