@@ -1,0 +1,20 @@
+import time
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class MyModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=MyModel)
+def my_signal_handler(sender, instance, **kwargs):
+    print("Signal handler started...")
+    time.sleep(5)  # Simulate a slow operation
+    print("Signal handler finished.")
+
+# Test case
+if __name__ == "__main__":
+    print("Creating object...")
+    obj = MyModel(name="Test Object")
+    obj.save()  # This will trigger the signal
+    print("Object created.")
